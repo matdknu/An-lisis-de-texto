@@ -1,0 +1,420 @@
+############################################################
+# 01  Preparación
+############################################################
+
+# Define directorio de trabajo (wd)
+# choose.dir()
+setwd("D:/Scripts R/Análisis de texto")
+getwd()
+
+# Instala paquetes
+#install.packages("readtext") # importar texto como data frame
+#install.packages("quanteda") # análisis
+#install.packages("readxl")
+#install.packages("quanteda.textplots")
+
+# Carga paquetes
+library(readtext) # importar texto como data frame
+library(quanteda) # análisis
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library("quanteda.textplots")
+library(gridExtra)
+
+
+presi_df <- readtext ("Programas_Gobierno__2021/*.txt",
+                      encoding = "UTF-8") 
+
+class(presi_df)
+names(presi_df)
+glimpse (presi_df)
+#presi_df[1,2]
+
+# Crea corpus “presi_c” desde data frame presidentes
+presi_c <- corpus(presi_df)
+
+class(presi_df)
+names(presi_df)
+glimpse (presi_df)
+presi_df[1,2]
+
+summary(presi_c)
+resumen <- as_tibble (summary(presi_c))
+resumen
+View(resumen)
+
+
+# Agrega "docvars" como metadata
+# Ordena información contenida en resumen
+metadata <- resumen %>% 
+  separate(col = Text,
+           into = c("Presidente", "Año", "Formato"))
+
+# Crea vardocs con información anterior
+docvars(presi_c, "Presidente") <- metadata$Presidente
+docvars(presi_c, "Año")        <- metadata$Año
+docvars(presi_c, "Formato")    <- metadata$Formato
+
+summary(presi_c)
+View(summary(presi_c))
+
+# Grafica
+resumen <- arrange(resumen,Tokens)
+dotchart(resumen$Tokens, resumen$Text)
+
+ggplot(data = metadata,
+       aes(x = Presidente,
+           y = Tokens, 
+           group = 1)) +
+  geom_line() +
+  geom_point() +
+  theme_bw() +
+  labs(x = "Presidente", 
+       y = "Número de palabras")+
+  labs(title = "Programa Jadue vs Boric ",
+       subtitle = "Comparación por número de palabras contenidas en el programa",
+       caption= "Fuente de datos: Página web de candidatos")
+
+
+
+Boric_c <- corpus_subset(presi_c, Presidente == "Boric")
+summary (Boric_c)
+
+Jadue_c <- corpus_subset(presi_c, Presidente == "Jadue")
+summary (Jadue_c)
+
+#Palabras clave en contexto kwic
+mujer10 <- kwic(presi_c, "mujer", window = 10)
+View(mujer10)
+View(table(mujer10$docname))
+mujer10 <- as.data.frame(mujer10)
+View(mujer10)
+class(mujer10)
+write_excel_csv2 (mujer10, "mujer10.csv")
+
+#Palabras clave en contexto kwic
+mujer_c10 <- kwic(presi_c, "mujer*", window = 10)
+View(table(mujer_c10$docname))
+View(mujer_c10)
+mujer_c10 <- as.data.frame(mujer_c10)
+View(mujer_c10)
+class(mujer_c10)
+write_excel_csv2 (mujer_c10, "mujer_c10.csv")
+
+# Más de una palabra en contexto.
+
+hm <- kwic(presi_c, 
+           c("hombre*", "mujer*"),
+           window=15)
+View(table(hm$docname))
+View(hm)
+hm <- as.data.frame(hm)
+View(hm)
+class(hm)
+write_excel_csv2 (hm, "hm.csv")
+
+# Reutiliza kwic para graficar dispersión
+textplot_xray(kwic(presi_c, "mujer*"))
+textplot_xray(kwic(presi_c, "hombre*"))
+
+textplot_xray(kwic(presi_c, "educaci*"))
+
+textplot_xray(kwic(presi_c, "constituci*"))
+
+textplot_xray(kwic(presi_c, "salud"))
+
+textplot_xray(kwic(presi_c, "migra*"))
+
+textplot_xray(kwic(presi_c, "*"))
+
+# Compara
+textplot_xray(
+  kwic(presi_c, "mujer*"),
+  kwic(presi_c, "hombre*"))
+
+textplot_xray(
+  kwic(presi_c, "trabajadores"),
+  kwic(presi_c, "empresarios")) +
+  labs(title = "Programa Jadue vs Boric ",
+       subtitle = "Comparación por dispersión léxica de Trabajadores y Empresarios",
+       caption= "Fuente de datos: Página web de candidatos")
+
+
+ggsave("trabajadores-empresarios.png")
+
+textplot_xray(
+  kwic(presi_c, "economía"),
+  kwic(presi_c, "salud")) +
+  labs(title = "Programa Jadue vs Boric ",
+       subtitle = "Comparación por dispersión léxica de Economía y Salud",
+       caption= "Fuente de datos: Página web de candidatos")
+
+ggsave("economía-salud.png")
+
+textplot_xray(
+  kwic(presi_c, "pobreza"),
+  kwic(presi_c, "delincuencia")) +
+  labs(title = "Programa Jadue vs Boric ",
+       subtitle = "Comparación por dispersión léxica de Pobreza y Delincuencia",
+       caption= "Fuente de datos: Página web de candidatos")
+
+ggsave("pobreza-delincuencia.png")
+
+
+textplot_xray(
+  kwic(presi_c, "desigualdad"),
+  kwic(presi_c, "riqueza")) +
+  labs(title = "Programa Jadue vs Boric ",
+       subtitle = "Comparación por dispersión léxica de Desigualdad y Riqueza",
+       caption= "Fuente de datos: Página web de candidatos")
+
+ggsave("desigualdad-riqueza.png")
+
+
+# Convierte corpus en tokens
+?tokens()
+
+presi_tkw <- tokens(presi_c,
+                    what = "word")
+View(summary(presi_tkw))
+
+presi_tks <- tokens(presi_c,
+                    what = "sentence")
+View(summary(presi_tks))
+
+presi_tks <- tokens(presi_c,
+                    what = "character")
+View(summary(presi_tks))
+
+# Tokeniza y remueve números, símbolos de puntuación
+# y separadores
+
+presi_tkw_cl <- tokens(presi_c,
+                       remove_numbers = TRUE,  
+                       remove_punct = TRUE,
+                       remove_separators = TRUE)
+
+
+# Crea matriz dfm (document-feature matrix)
+
+presi_dfm <- dfm(presi_c,
+                 remove = stopwords("spanish"), 
+                 remove_numbers = TRUE,  
+                 remove_punct = TRUE,
+                 remove_separators = TRUE)
+head(presi_dfm, 10)
+View(presi_dfm)
+
+# Crea matriz dfm (document-feature matrix) con sub corpus
+Boric_dfm <- Boric_c %>% 
+  dfm(remove = stopwords("spanish"), 
+      remove_numbers = TRUE,  
+      remove_punct = TRUE,
+      remove_separators = TRUE)
+head(Boric_dfm, 10)
+View(Boric_dfm)
+
+Jadue_dfm <- Jadue_c %>% 
+  dfm(remove = stopwords("spanish"), 
+      remove_numbers = TRUE,  
+      remove_punct = TRUE,
+      remove_separators = TRUE)
+head(Jadue_dfm, 10)
+View(Jadue_dfm)
+
+
+
+#Muestra palabras más frecuentes
+topfeatures(Boric_dfm, 20)  # 20 top words
+View(topfeatures(Boric_dfm, 20))
+
+# Nube de palabra general
+set.seed(100)
+textplot_wordcloud (Boric_dfm,
+                    max_words = 20,
+                    min_count = 4,
+                    comparison = FALSE) 
+#Muestra palabras más frecuentes
+topfeatures(Jadue_dfm, 20)  # 20 top words
+View(topfeatures(Jadue_dfm, 20))
+
+# Nube de palabra general
+set.seed(100)
+textplot_wordcloud (Jadue_dfm,
+                    max_words = 20,
+                    min_count = 4,
+                    comparison = FALSE)
+
+#----Diccionario----#
+
+
+#Crear diccionario
+conceptos = dictionary(list(Economía = c('crecimiento', "econom*", "salario", "sueldo", 
+                                           "trabajo", "empleo",  
+                                           "Wallmapu", "mar", "Patagonia", "lafken", "cordillera", "isla*"),
+                            OrdenPúblico = c('delincuencia', "carabineros", 
+                                            "protestas", "orden", "marchas", "manifesta*" ),
+                            Democracia = c('constit*', "derechos", 
+                                           "legiti*", "just*", "deber*", "participa*", 
+                                           "hist*", "conven", "Estado", "transpar*", "sociedad
+                                           relac*", "represent*", "convoc*"),
+                            Cultura = c('artes', "cultura", 
+                                           "teatro", "patrimonio", "danza", "actor*", 
+                                           "poesía", "poetas"),
+                            DerechosBásicos = c('salud', "educac*", 
+                                        "vivienda", "vejez"),
+                            MedioAmbiente = c('agua', "contaminación", 
+                                                "ambiente", "zona de sacrificio"),
+                            Minorías = c("pueblo*", "indígenas", "niñ*",
+                                         "mujer", "abuel*", 
+                                         "respeto", "plurinaci*", 
+                                         "diversidad", "sex", "regi*", 
+                                         "origina*", "mapuche", "intercultu", "cuidador", "cultur*")))
+
+
+
+#----Boric----"
+
+#Análisis de sentimiento al total de textos
+#crea dtm
+#Análisis de sentimiento al total de textos
+#crea dtm
+boric_dtm <- Boric_c %>% dfm(remove = c(stopwords("spanish")), 
+                             remove_punct=T, remove_numbers=T, 
+                             tolower = T) %>% dfm_trim(min_docfreq = 0)
+
+#Integrar diccionario a dtm
+boric_final = boric_dtm %>% dfm_lookup(conceptos) %>%
+  convert(to = "data.frame") %>% as_tibble
+boric_final
+
+boric_final = boric_final %>% mutate(length=ntoken(boric_dtm))
+
+
+#transponer resultado
+
+boric_t <- data.frame(t(boric_final[,2:8]))
+
+#suma de puntajes
+
+boric_t  <- data.frame(rowSums(boric_t))
+
+#Nombra la columna de puntajes como recuento
+names(boric_t)[1] <- "recuento"
+
+boric_t <- cbind("conceptos" = rownames(boric_t), 
+                 boric_t)
+
+
+dato_boric <- boric_t %>%
+  group_by(conceptos, recuento) 
+
+write_excel_csv2 (dato_boric, "dato_boric.csv")
+
+
+#crea gráfico
+
+View (boric_t)
+
+boric <- ggplot(boric_t,
+       aes(x = conceptos,
+           y = recuento, fill = conceptos)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Elementos contenidos en el programa de Gabriel Boric",
+       subtitle = "Desagregados por elementos conceptuales",
+       caption= "Fuente de datos: https://boricpresidente.cl/ ",
+       x = "Conceptos", y = "Frecuencia")
+
+
+dato_boric <- read_delim("D:/Scripts R/Análisis de texto/dato_boric.csv", 
+                         ";", escape_double = FALSE, trim_ws = TRUE)
+
+plot_boric <- ggplot(dato_boric,
+                     aes(x = conceptos,
+                         y = porcentaje, fill = conceptos)) + 
+  geom_bar(stat = "identity") +
+  labs(title = " Elementos contenidos en el programa de Gabriel Boric (%)",
+       x = "Conceptos", y = "Frecuencia") +
+  geom_text(aes(label = paste0(porcentaje, "%")))
+
+
+plot_boric
+
+
+#--Jadue---#
+
+#Análisis de sentimiento al total de textos
+#crea dtm
+jadue_dtm <- Jadue_c %>% dfm(remove = c(stopwords("spanish")), 
+                             remove_punct=T, remove_numbers=T, 
+                             tolower = T) %>% dfm_trim(min_docfreq = 0)
+
+#Integrar diccionario a dtm
+jadue_final = jadue_dtm %>% dfm_lookup(conceptos) %>%
+  convert(to = "data.frame") %>% as_tibble
+jadue_final
+
+jadue_final = jadue_final %>% mutate(length=ntoken(jadue_dtm))
+
+
+#transponer resultado
+
+jadue_t <- data.frame(t(jadue_final[,2:8]))
+
+
+#suma de puntajes
+
+jadue_t  <- data.frame(rowSums(jadue_t))
+
+#Nombra la columna de puntajes como recuento
+names(jadue_t)[1] <- "recuento"
+
+jadue_t <- cbind("conceptos" = rownames(jadue_t), 
+                 jadue_t)
+
+
+#crea gráfico
+
+View (jadue_t)
+
+jadue_t
+
+dato_jadue <- jadue_t %>%
+  group_by(conceptos, recuento) 
+
+write_excel_csv2 (dato_jadue, "dato_jadue.csv")
+
+
+
+jadue <- ggplot(jadue_t,
+       aes(x = conceptos,
+           y = recuento, fill = conceptos)) + 
+  geom_bar(stat = "identity") +
+  labs(title = "Elementos contenidos en el programa de Daniel Jadue",
+       subtitle = "Desagregados por elementos conceptuales",
+       caption= "Fuente de datos: https://www.danieljaduepresidente.cl/programa-de-gobierno/ ",
+       x = "Conceptos", y = "Frecuencia")
+
+
+jadue
+
+dato_jadue <- read_delim("D:/Scripts R/Análisis de texto/dato_jadue.csv", 
+                         ";", escape_double = FALSE, trim_ws = TRUE)
+
+plot_jadue <- ggplot(dato_jadue,
+            aes(x = conceptos,
+                y = porcentaje, fill = conceptos)) + 
+  geom_bar(stat = "identity") +
+  labs(title = " Elementos contenidos en el programa de Daniel Jadue (%)",
+       x = "Conceptos", y = "Frecuencia") +
+  geom_text(aes(label = paste0(porcentaje, "%")))
+
+
+plot_jadue
+
+grid.arrange(plot_jadue,plot_boric, nrow =2)
+
+ggsave("elementos-conceptuales.png")
+
+jadue
